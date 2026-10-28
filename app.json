@@ -67,6 +67,7 @@
                                                              "ios":  {
                                                                          "supportedFamilies":  [
                                                                                                    "systemSmall",
+                                                                       "systemLarge",
                                                                                                    "accessoryCircular",
                                                                                                    "accessoryRectangular",
                                                                                                    "accessoryInline"

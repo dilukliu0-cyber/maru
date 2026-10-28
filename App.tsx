@@ -46,7 +46,7 @@ function Themed() {
 function Main() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { items } = useStore();
+  const { items, settings } = useStore();
   const [view, setView] = useState<View_>('day');
   const [date, setDate] = useState(() => new Date());
   const [cursor, setCursor] = useState<Cursor>(() => ({ y: new Date().getFullYear(), m: new Date().getMonth(), mode: 'month' }));
@@ -68,8 +68,8 @@ function Main() {
   }, []);
 
   useEffect(() => {
-    syncWidgets(items);
-  }, [items]);
+    syncWidgets(items, settings.showNight);
+  }, [items, settings.showNight]);
 
   const pickDate = (d: Date) => {
     setDate(d);

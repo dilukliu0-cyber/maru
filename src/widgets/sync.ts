@@ -1,4 +1,4 @@
 import type { Item } from '../store';
 
 // Виджеты есть только на iOS.
-export function syncWidgets(_items: Item[]) {}
+export function syncWidgets(_items: Item[], _night = true) {}
