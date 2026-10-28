@@ -54,7 +54,7 @@ export function SettingsScreen({ now }: { now: Date }) {
       <View style={[st.row, { borderBottomWidth: 0 }]}>
         <Text style={[st.title, { color: t.ink }]}>Виджет</Text>
         <Text style={[st.sub, { color: t.muted }]}>
-          Мини-кольцо на главный экран: сколько дня прошло и что дальше. Добавь его: удержи экран «Домой» → «+» → «Сутки».
+          Мини-кольцо на главный экран: сколько дня прошло и что дальше. Добавь его: удержи экран «Домой» → «+» → «maru».
         </Text>
         <View style={[st.widget, { backgroundColor: t.soft }]}>
           <MiniRing t={t} size={72} nowMin={nm} nextMin={next ? toMin(next.start!) : null} />

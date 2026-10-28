@@ -44,7 +44,7 @@ type Data = {
   timer: TimerState;
 };
 
-const KEY = 'sutki.v1';
+const KEY = 'maru.v1';
 
 const DEFAULT_SETTINGS: Settings = { theme: 'auto', showNight: true, sound: true, focusMin: 25, breakMin: 5 };
 const DEFAULT_TIMER: TimerState = { mode: 'focus', total: 25 * 60, remain: 25 * 60, endAt: 0, running: false, task: null };

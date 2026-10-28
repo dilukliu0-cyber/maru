@@ -28,7 +28,7 @@ const DayRingLayout = (p: DayRingProps, env: WidgetEnvironment) => {
   if (f === 'accessoryCircular') {
     return (
       <Gauge value={p.frac} modifiers={[gaugeStyle('circularCapacity')]} currentValueLabel={<Text>{p.nextTime || '—'}</Text>}>
-        <Text>сутки</Text>
+        <Text>maru</Text>
       </Gauge>
     );
   }
@@ -44,7 +44,7 @@ const DayRingLayout = (p: DayRingProps, env: WidgetEnvironment) => {
 
   const R = 56;
   return (
-    <ZStack modifiers={[padding({ all: 0 }), containerBackground('#000000', 'widget'), widgetURL('sutki://day')]}>
+    <ZStack modifiers={[padding({ all: 0 }), containerBackground('#000000', 'widget'), widgetURL('maru://day')]}>
       {p.segs.map((s, h) => (
         <RoundedRectangle
           key={h}

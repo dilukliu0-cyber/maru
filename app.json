@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Сутки",
-    "slug": "sutki",
+    "name": "maru",
+    "slug": "maru",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "sutki",
+    "scheme": "maru",
     "backgroundColor": "#000000",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.diluk.sutki",
+      "bundleIdentifier": "com.diluk.maru",
       "appleTeamId": "RH67B2MANC",
       "buildNumber": "1",
       "infoPlist": {
@@ -47,8 +47,8 @@
       [
         "expo-widgets",
         {
-          "bundleIdentifier": "com.diluk.sutki.widgets",
-          "groupIdentifier": "group.com.diluk.sutki",
+          "bundleIdentifier": "com.diluk.maru.widgets",
+          "groupIdentifier": "group.com.diluk.maru",
           "widgets": [
             {
               "name": "DayRingWidget",
