@@ -1,0 +1,27 @@
+name: ASC key check
+
+# Проверяет, что ключ App Store Connect из секретов принимается Apple.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          pip install --quiet pyjwt cryptography requests
+          printf '%s\n' "$ASC_KEY_P8" | head -1
+          printf '%s\n' "$ASC_KEY_P8" | wc -l
+          echo "key id length: ${#ASC_KEY_ID}, issuer length: ${#ASC_ISSUER_ID}"
+          python - <<'PY'
+          import os, time, jwt, requests
+          t = jwt.encode({"iss": os.environ["ASC_ISSUER_ID"], "iat": int(time.time()), "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"},
+                         os.environ["ASC_KEY_P8"], algorithm="ES256", headers={"kid": os.environ["ASC_KEY_ID"]})
+          r = requests.get("https://api.appstoreconnect.apple.com/v1/bundleIds", headers={"Authorization": f"Bearer {t}"}, params={"filter[identifier]": "com.diluk.maru"})
+          print(r.status_code, r.text[:300])
+          PY
