@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { fmtClock, todayKey } from './date';
@@ -16,7 +16,7 @@ const CIRC = 2 * Math.PI * R;
 
 export function FocusScreen({ api }: { api: TimerApi }) {
   const t = useTheme();
-  const { items, settings } = useStore();
+  const { items, settings, setSettings } = useStore();
   const { width } = useWindowDimensions();
   const { timer, remain } = api;
   const size = Math.min(width * 0.72, 272);
@@ -37,7 +37,21 @@ export function FocusScreen({ api }: { api: TimerApi }) {
   const cur = timer.mode === 'focus' ? settings.focusMin : settings.breakMin;
   const isPreset = timer.total === cur * 60;
   const frac = timer.total ? remain / timer.total : 0;
-  const slots = Math.max(4, api.sessionsToday);
+  const goal = settings.sessionGoal;
+  const slots = Math.max(goal, api.sessionsToday);
+
+  // Своя длительность: 1–180 минут, кнопками ±5 или вводом числа.
+  const customOn = isPreset && !presets.includes(cur);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [goalOpen, setGoalOpen] = useState(false);
+  const [draft, setDraft] = useState(String(cur));
+  useEffect(() => setDraft(String(cur)), [cur]);
+  const setCustom = (min: number) => {
+    const v = Math.min(180, Math.max(1, Math.round(min)));
+    tap();
+    setDraft(String(v));
+    api.setPreset(v);
+  };
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
@@ -89,6 +103,7 @@ export function FocusScreen({ api }: { api: TimerApi }) {
               key={min}
               onPress={() => {
                 tap();
+                setCustomOpen(false);
                 api.setPreset(min);
               }}
               style={[st.preset, { borderColor: on ? t.ink : t.hair, backgroundColor: on ? t.ink : 'transparent' }]}
@@ -97,7 +112,38 @@ export function FocusScreen({ api }: { api: TimerApi }) {
             </Pressable>
           );
         })}
+        <Pressable
+          onPress={() => {
+            tap();
+            setCustomOpen((v) => !v);
+          }}
+          style={[st.preset, { borderColor: customOn ? t.ink : t.hair, backgroundColor: customOn ? t.ink : 'transparent' }]}
+        >
+          <Text style={{ fontFamily: MONO, fontSize: 13.5, fontWeight: customOn ? '600' : '500', color: customOn ? t.onInk : t.inkSoft }}>
+            {customOn ? cur : 'своё'}
+          </Text>
+        </Pressable>
       </View>
+      {customOpen && (
+        <View style={st.custom}>
+          <Pressable accessibilityLabel="Меньше" onPress={() => setCustom(cur - (cur > 5 ? 5 : 1))} style={[st.ghostSm, { borderColor: t.hair }]}>
+            <Text style={[st.pm, { color: t.inkSoft }]}>−</Text>
+          </Pressable>
+          <TextInput
+            value={draft}
+            onChangeText={(v) => setDraft(v.replace(/\D/g, '').slice(0, 3))}
+            onBlur={() => setCustom(Number(draft) || cur)}
+            onSubmitEditing={() => setCustom(Number(draft) || cur)}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            style={[st.customInput, { color: t.ink, borderColor: t.hair }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
+          />
+          <Text style={{ fontSize: 13.5, color: t.muted }}>мин</Text>
+          <Pressable accessibilityLabel="Больше" onPress={() => setCustom(cur + (cur >= 5 ? 5 : 1))} style={[st.ghostSm, { borderColor: t.hair }]}>
+            <Text style={[st.pm, { color: t.inkSoft }]}>+</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={st.controls}>
         <Pressable
@@ -128,7 +174,7 @@ export function FocusScreen({ api }: { api: TimerApi }) {
           }}
           style={[st.ghost, { borderColor: t.hair }]}
         >
-          <Text style={{ fontFamily: MONO, fontSize: 12, fontWeight: '600', color: t.inkSoft }}>+1′</Text>
+          <Text style={{ fontFamily: MONO, fontSize: 12, fontWeight: '600', color: t.inkSoft }}>+1</Text>
         </Pressable>
       </View>
 
@@ -155,8 +201,19 @@ export function FocusScreen({ api }: { api: TimerApi }) {
         </View>
       </View>
 
-      <View style={st.sessions}>
+      {/* Нажатие на строку — выбрать, сколько сессий планируешь на день. */}
+      <Pressable
+        accessibilityLabel="Сколько сессий на день"
+        onPress={() => {
+          tap();
+          setGoalOpen((v) => !v);
+        }}
+        style={st.sessions}
+      >
         <MicroLabel>Сессии сегодня</MicroLabel>
+        <Text style={[st.sCount, { color: t.muted }]}>
+          {api.sessionsToday}/{goal}
+        </Text>
         <View style={{ flexDirection: 'row', gap: 6, marginLeft: 9 }}>
           {Array.from({ length: slots }, (_, i) => (
             <View
@@ -165,7 +222,27 @@ export function FocusScreen({ api }: { api: TimerApi }) {
             />
           ))}
         </View>
-      </View>
+      </Pressable>
+      {goalOpen && (
+        <View style={st.presetRow}>
+          {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => {
+            const on = n === goal;
+            return (
+              <Pressable
+                key={n}
+                onPress={() => {
+                  tap();
+                  setSettings({ sessionGoal: n });
+                  setGoalOpen(false);
+                }}
+                style={[st.goal, { borderColor: on ? t.ink : t.hair, backgroundColor: on ? t.ink : 'transparent' }]}
+              >
+                <Text style={{ fontFamily: MONO, fontSize: 13.5, fontWeight: '600', color: on ? t.onInk : t.inkSoft }}>{n}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -183,4 +260,10 @@ const st = StyleSheet.create({
   chip: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 13, maxWidth: '100%' },
   sessions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 26 },
   sDot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5 },
+  sCount: { fontFamily: MONO, fontSize: 12, marginLeft: 8 },
+  goal: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  custom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 },
+  ghostSm: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  pm: { fontSize: 20, fontWeight: '500', marginTop: -2 },
+  customInput: { width: 64, borderWidth: 1, borderRadius: 12, paddingVertical: 8, textAlign: 'center', fontFamily: MONO, fontSize: 17, fontWeight: '600' },
 });

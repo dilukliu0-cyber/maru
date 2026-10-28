@@ -34,6 +34,7 @@ export type Settings = {
   sound: boolean;
   focusMin: number;
   breakMin: number;
+  sessionGoal: number; // сколько фокус-сессий в день хочется
 };
 
 export type TimerState = {
@@ -54,7 +55,7 @@ type Data = {
 
 const KEY = 'maru.v1';
 
-const DEFAULT_SETTINGS: Settings = { theme: 'auto', showNight: true, sound: true, focusMin: 25, breakMin: 5 };
+const DEFAULT_SETTINGS: Settings = { theme: 'auto', showNight: true, sound: true, focusMin: 25, breakMin: 5, sessionGoal: 4 };
 const DEFAULT_TIMER: TimerState = { mode: 'focus', total: 25 * 60, remain: 25 * 60, endAt: 0, running: false, task: null };
 const EMPTY: Data = { items: [], settings: DEFAULT_SETTINGS, sessions: {}, timer: DEFAULT_TIMER };
 

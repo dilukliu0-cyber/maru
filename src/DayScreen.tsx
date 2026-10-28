@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { addDays, atTime, dayLong, DOWS, fmtDur, fmtLength, keyOf, MONTHS_GEN, shortDate, toMin, todayKey } from './date';
@@ -6,7 +6,7 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Stopwatch } from './Icon
 import { Ring } from './Ring';
 import { DayItem, dayItemsOn, focusEventFor, isNow, isPast, Item, sortItems, useStore } from './store';
 import { MONO, useTheme } from './theme';
-import { IconButton, tap, thud } from './ui';
+import { IconButton, tap, thud, useSwipe } from './ui';
 
 type Props = {
   date: Date;
@@ -22,7 +22,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
   const { width } = useWindowDimensions();
   const [selection, setSelection] = useState<Record<string, string | null>>({});
   const [closed, setClosed] = useState({ events: false, notes: false });
-  const touch = useRef<{ x: number; y: number } | null>(null);
+
 
   const key = keyOf(date);
   const isToday = key === todayKey();
@@ -47,6 +47,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
     tap();
     setDate(addDays(date, n));
   };
+  const swipe = useSwipe(shift);
 
   const center = centerText(events, key, isToday, date, now, nm, selectedId);
   const ringSize = Math.min(width * 0.84, 348);
@@ -55,15 +56,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
     <ScrollView
       contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 30 }}
       showsVerticalScrollIndicator={false}
-      onTouchStart={(e) => (touch.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
-      onTouchEnd={(e) => {
-        const s = touch.current;
-        touch.current = null;
-        if (!s) return;
-        const dx = e.nativeEvent.pageX - s.x;
-        const dy = e.nativeEvent.pageY - s.y;
-        if (Math.abs(dx) > 70 && Math.abs(dy) < 40) shift(dx < 0 ? 1 : -1);
-      }}
+      {...swipe}
     >
       <View style={st.head}>
         <IconButton onPress={() => shift(-1)} label="Предыдущий день">

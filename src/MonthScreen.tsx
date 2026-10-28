@@ -5,7 +5,7 @@ import { keyOf, MONTHS, MONTHS_GEN, todayKey, WEEK_HEAD } from './date';
 import { ChevronLeft, ChevronRight } from './Icons';
 import { itemsByDate, useStore } from './store';
 import { useTheme } from './theme';
-import { IconButton, tap } from './ui';
+import { IconButton, tap, useSwipe } from './ui';
 
 export type Cursor = { y: number; m: number; mode: 'month' | 'year' };
 
@@ -29,8 +29,21 @@ export function MonthScreen({ cursor, setCursor, selected, onPickDay }: Props) {
   const tKey = todayKey();
   const sKey = keyOf(selected);
 
+  // Свайп влево — следующий месяц (в виде года — следующий год), вправо — предыдущий.
+  const shift = (n: number) => {
+    tap();
+    if (cursor.mode === 'year') return setCursor({ ...cursor, y: cursor.y + n });
+    let m = cursor.m + n;
+    let y = cursor.y;
+    if (m < 0) (m = 11), y--;
+    if (m > 11) (m = 0), y++;
+    setCursor({ y, m, mode: 'month' });
+  };
+  const swipe = useSwipe(shift);
+
   if (cursor.mode === 'year') {
     return (
+      <View style={{ flex: 1 }} {...swipe}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
         <View style={st.head}>
           <IconButton onPress={() => setCursor({ ...cursor, y: cursor.y - 1 })} label="Предыдущий год">
@@ -82,19 +95,15 @@ export function MonthScreen({ cursor, setCursor, selected, onPickDay }: Props) {
           })}
         </View>
       </ScrollView>
+      </View>
     );
   }
 
-  const step = (n: number) => {
-    let m = cursor.m + n;
-    let y = cursor.y;
-    if (m < 0) (m = 11), y--;
-    if (m > 11) (m = 0), y++;
-    setCursor({ y, m, mode: 'month' });
-  };
+  const step = shift;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }} {...swipe}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
       <Pressable
         onPress={() => {
           tap();
@@ -179,6 +188,7 @@ export function MonthScreen({ cursor, setCursor, selected, onPickDay }: Props) {
       </View>
       <Text style={[st.hint, { color: t.muted }]}>Нажми на день, чтобы открыть его кольцо суток.</Text>
     </ScrollView>
+    </View>
   );
 }
 

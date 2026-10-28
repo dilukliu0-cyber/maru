@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { ReactNode, useEffect, useRef } from 'react';
-import { Animated, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { useTheme } from './theme';
 
@@ -13,6 +13,21 @@ export const thud = () => {
 export const success = () => {
   if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 };
+
+// Горизонтальный свайп: влево → +1, вправо → −1. Вертикальную прокрутку не перехватывает.
+export function useSwipe(onShift: (n: number) => void) {
+  const cb = useRef(onShift);
+  cb.current = onShift;
+  return useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+      onPanResponderRelease: (_, g) => {
+        if (Math.abs(g.dx) > 60) cb.current(g.dx < 0 ? 1 : -1);
+      },
+      onPanResponderTerminationRequest: () => true,
+    }),
+  ).current.panHandlers;
+}
 
 export function IconButton({ onPress, children, label, size = 38 }: { onPress: () => void; children: ReactNode; label: string; size?: number }) {
   const t = useTheme();
