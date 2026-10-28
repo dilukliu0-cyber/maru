@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { addDays, atTime, dayLong, DOWS, fmtDur, fmtLength, keyOf, MONTHS_GEN, toMin, todayKey } from './date';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Stopwatch } from './Icons';
 import { Ring } from './Ring';
-import { focusEventFor, isNow, isPast, Item, sortItems, useStore } from './store';
+import { focusEventFor, isNow, isPast, Item, noteVisibleOn, sortItems, useStore } from './store';
 import { MONO, useTheme } from './theme';
 import { IconButton, tap, thud } from './ui';
 
@@ -30,7 +30,11 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
   const ringMin = Math.floor(nm);
   const dayItems = useMemo(() => items.filter((i) => i.date === key), [items, key]);
   const events = useMemo(() => sortItems(dayItems.filter((i) => i.type === 'event')), [dayItems]);
-  const notes = useMemo(() => sortItems(dayItems.filter((i) => i.type === 'note')), [dayItems]);
+  // Незакрытые заметки прошлых дней переходят сюда; старые — сверху.
+  const notes = useMemo(
+    () => sortItems(items.filter((i) => noteVisibleOn(i, key))).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    [items, key],
+  );
   const selectedId = selection[key] ?? null;
 
   const select = (id: string) => {
@@ -182,7 +186,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
             key={nt.id}
             onPress={() => {
               tap();
-              updateItem(nt.id, { done: !nt.done });
+              updateItem(nt.id, nt.done ? { done: false, doneDate: undefined } : { done: true, doneDate: key });
             }}
             onLongPress={() => {
               thud();
@@ -195,7 +199,13 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
             </View>
             <Text style={[st.noteText, { color: nt.done ? t.muted : t.ink, textDecorationLine: nt.done ? 'line-through' : 'none' }]}>{nt.title}</Text>
             <Text style={[st.noteMeta, { color: t.muted }]}>
-              {nt.kind === 'allday' ? 'весь день' : nt.kind === 'range' ? `${nt.start} – ${nt.end}` : nt.start}
+              {nt.date < key
+                ? `с ${shortDate(nt.date)}`
+                : nt.kind === 'allday'
+                  ? 'весь день'
+                  : nt.kind === 'range'
+                    ? `${nt.start} – ${nt.end}`
+                    : nt.start}
             </Text>
           </Pressable>
         ))}
@@ -229,6 +239,13 @@ function Section({ title, count, closed, onToggle, children }: { title: string; 
       {!closed && <View style={{ marginTop: 2 }}>{children}</View>}
     </View>
   );
+}
+
+// «25 окт.» — откуда перенесена заметка.
+function shortDate(k: string) {
+  const [, m, d] = k.split('-').map(Number);
+  const g = MONTHS_GEN[m - 1];
+  return `${d} ${g.length > 4 ? g.slice(0, 3) + '.' : g}`;
 }
 
 // «завтра», «через 3 дня», «5 дней назад».

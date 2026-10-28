@@ -15,6 +15,7 @@ export type Item = {
   start?: string; // HH:MM
   end?: string;
   done?: boolean;
+  doneDate?: string; // день, в который заметку закрыли
   created: number;
 };
 
@@ -140,7 +141,11 @@ export function itemsByDate(items: Item[]) {
   return map;
 }
 
-export const isPast = (it: Item, nm: number) =>
+// Заметка видна со своего дня и дальше, пока её не закрыли (и в день закрытия).
+export const noteVisibleOn = (n: Item, key: string) =>
+  n.type === 'note' && n.date <= key && (!n.done || (n.doneDate ?? n.date) >= key);
+
+export const isPast =(it: Item, nm: number) =>
   (it.kind === 'range' && toMin(it.end!) <= nm) || (it.kind === 'point' && toMin(it.start!) < nm);
 export const isNow = (it: Item, nm: number) => it.kind === 'range' && toMin(it.start!) <= nm && nm < toMin(it.end!);
 
