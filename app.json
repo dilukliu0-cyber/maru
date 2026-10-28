@@ -1,72 +1,82 @@
 {
-  "expo": {
-    "name": "maru",
-    "slug": "maru",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
-    "scheme": "maru",
-    "backgroundColor": "#000000",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.diluk.maru",
-      "appleTeamId": "RH67B2MANC",
-      "buildNumber": "1",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "17.0"
-          }
-        }
-      ],
-      "expo-audio",
-      [
-        "expo-notifications",
-        {
-          "sounds": [
-            "./assets/chime.wav"
-          ]
-        }
-      ],
-      "@react-native-community/datetimepicker",
-      [
-        "expo-widgets",
-        {
-          "bundleIdentifier": "com.diluk.maru.widgets",
-          "groupIdentifier": "group.com.diluk.maru",
-          "widgets": [
-            {
-              "name": "DayRingWidget",
-              "displayName": "Кольцо дня",
-              "description": "Сколько дня прошло и что дальше",
-              "ios": {
-                "supportedFamilies": [
-                  "systemSmall",
-                  "accessoryCircular",
-                  "accessoryRectangular",
-                  "accessoryInline"
-                ]
-              }
-            }
-          ]
-        }
-      ],
-      "expo-asset"
-    ]
-  }
+    "expo":  {
+                 "name":  "maru",
+                 "slug":  "maru",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/icon.png",
+                 "userInterfaceStyle":  "automatic",
+                 "scheme":  "maru",
+                 "backgroundColor":  "#FFFFFF",
+                 "splash":  {
+                                "image":  "./assets/splash-icon.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#FFFFFF"
+                            },
+                 "ios":  {
+                             "supportsTablet":  false,
+                             "bundleIdentifier":  "com.diluk.maru",
+                             "appleTeamId":  "RH67B2MANC",
+                             "buildNumber":  "1",
+                             "infoPlist":  {
+                                               "ITSAppUsesNonExemptEncryption":  false
+                                           },
+                             "splash":  {
+                                            "image":  "./assets/splash-icon.png",
+                                            "resizeMode":  "contain",
+                                            "backgroundColor":  "#FFFFFF",
+                                            "dark":  {
+                                                         "image":  "./assets/splash-icon-dark.png",
+                                                         "resizeMode":  "contain",
+                                                         "backgroundColor":  "#000000"
+                                                     }
+                                        }
+                         },
+                 "web":  {
+                             "favicon":  "./assets/favicon.png"
+                         },
+                 "plugins":  [
+                                 [
+                                     "expo-build-properties",
+                                     {
+                                         "ios":  {
+                                                     "deploymentTarget":  "17.0"
+                                                 }
+                                     }
+                                 ],
+                                 "expo-audio",
+                                 [
+                                     "expo-notifications",
+                                     {
+                                         "sounds":  [
+                                                        "./assets/chime.wav"
+                                                    ]
+                                     }
+                                 ],
+                                 "@react-native-community/datetimepicker",
+                                 [
+                                     "expo-widgets",
+                                     {
+                                         "bundleIdentifier":  "com.diluk.maru.widgets",
+                                         "groupIdentifier":  "group.com.diluk.maru",
+                                         "widgets":  [
+                                                         {
+                                                             "name":  "DayRingWidget",
+                                                             "displayName":  "Кольцо дня",
+                                                             "description":  "Сколько дня прошло и что дальше",
+                                                             "ios":  {
+                                                                         "supportedFamilies":  [
+                                                                                                   "systemSmall",
+                                                                                                   "accessoryCircular",
+                                                                                                   "accessoryRectangular",
+                                                                                                   "accessoryInline"
+                                                                                               ]
+                                                                     }
+                                                         }
+                                                     ]
+                                     }
+                                 ],
+                                 "expo-asset"
+                             ]
+             }
 }
