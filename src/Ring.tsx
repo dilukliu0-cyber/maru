@@ -66,6 +66,14 @@ function RingImpl({ t, size, items, isToday, nowMin, selectedId, showNight, onSe
         if (ev.kind === 'range') {
           const s = toMin(ev.start!);
           const e = toMin(ev.end!);
+          // Середина многодневного события занимает весь день — дугой это не нарисовать.
+          if (e - s >= 1438) {
+            return (
+              <G key={ev.id} onPress={() => onSelect(ev.id)}>
+                <Circle cx={C} cy={C} r={R} fill="none" strokeWidth={30} stroke={t.ink} opacity={sel ? 1 : 0.38} />
+              </G>
+            );
+          }
           return (
             <G key={ev.id} onPress={() => onSelect(ev.id)}>
               <Path d={arcPath(C, C, R, s + 1, e - 1)} fill="none" strokeWidth={30} stroke={t.ink} opacity={sel ? 1 : past ? 0.16 : 0.38} />

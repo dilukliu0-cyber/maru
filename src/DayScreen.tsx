@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { addDays, atTime, dayLong, DOWS, fmtDur, fmtLength, keyOf, MONTHS_GEN, toMin, todayKey } from './date';
+import { addDays, atTime, dayLong, DOWS, fmtDur, fmtLength, keyOf, MONTHS_GEN, shortDate, toMin, todayKey } from './date';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Stopwatch } from './Icons';
 import { Ring } from './Ring';
-import { focusEventFor, isNow, isPast, Item, noteVisibleOn, sortItems, useStore } from './store';
+import { DayItem, dayItemsOn, focusEventFor, isNow, isPast, Item, sortItems, useStore } from './store';
 import { MONO, useTheme } from './theme';
 import { IconButton, tap, thud } from './ui';
 
@@ -28,13 +28,15 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
   const isToday = key === todayKey();
   const nm = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   const ringMin = Math.floor(nm);
-  const dayItems = useMemo(() => items.filter((i) => i.date === key), [items, key]);
+  const dayItems = useMemo(() => dayItemsOn(items, key), [items, key]);
   const events = useMemo(() => sortItems(dayItems.filter((i) => i.type === 'event')), [dayItems]);
-  // Незакрытые заметки прошлых дней переходят сюда; старые — сверху.
+  // Заметки других дней (на несколько дней / пока не закрою) — старые сверху.
   const notes = useMemo(
-    () => sortItems(items.filter((i) => noteVisibleOn(i, key))).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
-    [items, key],
+    () => sortItems(dayItems.filter((i) => i.type === 'note')).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    [dayItems],
   );
+  // Править всегда исходную запись, а не обрезанную по дню.
+  const edit = (it: Item) => onEdit(items.find((x) => x.id === it.id) ?? it);
   const selectedId = selection[key] ?? null;
 
   const select = (id: string) => {
@@ -143,7 +145,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
               onPress={() => select(ev.id)}
               onLongPress={() => {
                 thud();
-                onEdit(ev);
+                edit(ev);
               }}
               style={[
                 st.evRow,
@@ -153,7 +155,15 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
             >
               <View style={{ width: 74 }}>
                 <Text style={[st.t1, { color: t.ink }]}>{ev.kind === 'allday' ? 'весь' : ev.start}</Text>
-                <Text style={[st.t2, { color: t.muted }]}>{ev.kind === 'allday' ? 'день' : ev.kind === 'range' ? `– ${ev.end}` : 'точно'}</Text>
+                <Text style={[st.t2, { color: t.muted }]}>
+                  {ev.kind === 'allday'
+                    ? 'день'
+                    : ev.span && key !== ev.span.endDate
+                      ? `→ ${shortDate(ev.span.endDate)}`
+                      : ev.kind === 'range'
+                        ? `– ${ev.end}`
+                        : 'точно'}
+                </Text>
               </View>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Text style={[st.evName, { color: t.ink, fontWeight: nowFlag ? '700' : '500' }]}>{ev.title}</Text>
@@ -190,7 +200,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
             }}
             onLongPress={() => {
               thud();
-              onEdit(nt);
+              edit(nt);
             }}
             style={[st.noteRow, { borderBottomColor: t.hair, borderBottomWidth: i === notes.length - 1 ? 0 : StyleSheet.hairlineWidth * 2 }]}
           >
@@ -199,13 +209,7 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
             </View>
             <Text style={[st.noteText, { color: nt.done ? t.muted : t.ink, textDecorationLine: nt.done ? 'line-through' : 'none' }]}>{nt.title}</Text>
             <Text style={[st.noteMeta, { color: t.muted }]}>
-              {nt.date < key
-                ? `с ${shortDate(nt.date)}`
-                : nt.kind === 'allday'
-                  ? 'весь день'
-                  : nt.kind === 'range'
-                    ? `${nt.start} – ${nt.end}`
-                    : nt.start}
+              {noteMeta(nt, key)}
             </Text>
           </Pressable>
         ))}
@@ -241,11 +245,14 @@ function Section({ title, count, closed, onToggle, children }: { title: string; 
   );
 }
 
-// «25 окт.» — откуда перенесена заметка.
-function shortDate(k: string) {
-  const [, m, d] = k.split('-').map(Number);
-  const g = MONTHS_GEN[m - 1];
-  return `${d} ${g.length > 4 ? g.slice(0, 3) + '.' : g}`;
+// Подпись справа у заметки: срок или откуда она тянется.
+function noteMeta(n: Item, key: string) {
+  const mode = n.noteMode ?? 'open';
+  if (mode === 'span') return `до ${shortDate(n.endDate ?? n.date)}`;
+  if (mode === 'open') return n.date < key ? `с ${shortDate(n.date)}` : 'бессрочно';
+  if (n.kind === 'range') return `${n.start} – ${n.end}`;
+  if (n.kind === 'point') return n.start!;
+  return 'этот день';
 }
 
 // «завтра», «через 3 дня», «5 дней назад».
@@ -264,18 +271,27 @@ function relDay(date: Date, now: Date) {
   return n > 0 ? `через ${k} ${word}` : `${k} ${word} назад`;
 }
 
-function centerText(events: Item[], key: string, isToday: boolean, date: Date, now: Date, nm: number, selectedId: string | null) {
-  const ev = focusEventFor(events, isToday, nm, selectedId);
+function centerText(events: DayItem[], key: string, isToday: boolean, date: Date, now: Date, nm: number, selectedId: string | null) {
+  const ev = focusEventFor(events, isToday, nm, selectedId) as DayItem | null;
   if (!ev) return { label: 'планов нет', count: '—', name: 'Свободный день', time: '' };
   if (ev.kind === 'allday') {
     return { label: isToday ? 'сегодня · весь день' : `${DOWS[date.getDay()]} · весь день`, count: 'весь день', name: ev.title, time: '' };
   }
+  const sp = ev.span;
   const len = ev.kind === 'range' ? toMin(ev.end!) - toMin(ev.start!) : 0;
-  const time = ev.kind === 'range' ? `${ev.start} – ${ev.end} · ${fmtLength(len)}` : `в ${ev.start}`;
-  if (!isToday) return { label: dayLong(date), count: ev.start!, name: ev.title, time };
-  const startD = atTime(key, ev.start!);
+  const time = sp
+    ? key === sp.date
+      ? `${sp.start} → ${shortDate(sp.endDate)} ${sp.end}`
+      : `до ${shortDate(sp.endDate)} ${sp.end}`
+    : ev.kind === 'range'
+      ? `${ev.start} – ${ev.end} · ${fmtLength(len)}`
+      : `в ${ev.start}`;
+  const wholeDay = !!sp && len >= 1438;
+  if (!isToday) return { label: dayLong(date), count: wholeDay ? 'весь день' : ev.start!, name: ev.title, time };
+  // У многодневного события отсчёт идёт до настоящих начала и конца, а не до границ дня.
+  const startD = sp ? atTime(sp.date, sp.start) : atTime(key, ev.start!);
   if (ev.kind === 'range') {
-    const endD = atTime(key, ev.end!);
+    const endD = sp ? atTime(sp.endDate, sp.end) : atTime(key, ev.end!);
     if (now >= startD && now < endD) return { label: 'сейчас идёт · осталось', count: fmtDur(+endD - +now), name: ev.title, time };
     if (now < startD) return { label: 'начнётся через', count: fmtDur(+startD - +now), name: ev.title, time };
     return { label: 'уже прошло', count: ev.start!, name: ev.title, time };

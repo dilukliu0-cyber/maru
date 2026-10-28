@@ -4,7 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { fmtClock, todayKey } from './date';
 import { Pause, Play, Reset } from './Icons';
-import { sortItems, useStore } from './store';
+import { eventsOn, sortItems, useStore } from './store';
 import { MONO, useTheme } from './theme';
 import type { TimerApi } from './timer';
 import { MicroLabel, Segmented, tap, thud } from './ui';
@@ -22,7 +22,7 @@ export function FocusScreen({ api }: { api: TimerApi }) {
   const size = Math.min(width * 0.72, 272);
 
   const today = todayKey();
-  const tasks = useMemo(() => sortItems(items.filter((i) => i.date === today && i.type === 'event' && i.kind !== 'allday')), [items, today]);
+  const tasks = useMemo(() => sortItems(eventsOn(items, today).filter((i) => i.kind !== 'allday')), [items, today]);
 
   const state = timer.running
     ? timer.mode === 'focus'

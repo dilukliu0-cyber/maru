@@ -1,5 +1,5 @@
-import { addDays, DOWS_SHORT, fmtLength, keyOf, MONTHS_GEN, toMin } from '../date';
-import { focusEventFor, Item, sortItems } from '../store';
+import { addDays, atTime, DOWS_SHORT, fmtLength, keyOf, MONTHS_GEN, shortDate, toMin } from '../date';
+import { DayItem, eventsOn, focusEventFor, Item, sortItems } from '../store';
 import { DayRingWidget, type DayRingProps } from './index';
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -8,7 +8,7 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…'
 function build(items: Item[], at: Date, night: boolean): DayRingProps {
   const key = keyOf(at);
   const nm = at.getHours() * 60 + at.getMinutes();
-  const evs = sortItems(items.filter((i) => i.date === key && i.type === 'event'));
+  const evs = sortItems(eventsOn(items, key));
 
   const q = Array.from({ length: 96 }, (_, i) => {
     const s = i * 15;
@@ -23,7 +23,7 @@ function build(items: Item[], at: Date, night: boolean): DayRingProps {
   const allDay = evs.find((e) => e.kind === 'allday');
 
   // Центр большого виджета — как центр кольца в приложении.
-  const ev = focusEventFor(evs, true, nm);
+  const ev = focusEventFor(evs, true, nm) as DayItem | null;
   let label = 'планов нет';
   let big = '—';
   let name = 'Свободный день';
@@ -36,10 +36,18 @@ function build(items: Item[], at: Date, night: boolean): DayRingProps {
     } else {
       const s = toMin(ev.start!);
       const e = ev.kind === 'range' ? toMin(ev.end!) : s;
-      time = ev.kind === 'range' ? `${ev.start} – ${ev.end}` : `в ${ev.start}`;
+      const sp = ev.span;
+      time = sp
+        ? key === sp.date
+          ? `${sp.start} → ${shortDate(sp.endDate)} ${sp.end}`
+          : `до ${shortDate(sp.endDate)} ${sp.end}`
+        : ev.kind === 'range'
+          ? `${ev.start} – ${ev.end}`
+          : `в ${ev.start}`;
       if (ev.kind === 'range' && s <= nm && nm < e) {
         label = 'сейчас идёт · осталось';
-        big = fmtLength(e - nm);
+        // У многодневного — до настоящего конца, а не до полуночи.
+        big = sp ? fmtLength(Math.round((+atTime(sp.endDate, sp.end) - +at) / 60000)) : fmtLength(e - nm);
       } else if (s > nm) {
         label = 'начнётся через';
         big = fmtLength(s - nm);

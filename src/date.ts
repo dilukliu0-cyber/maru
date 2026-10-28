@@ -28,6 +28,7 @@ export const atTime = (key: string, t: string) => {
 // До часа — «мм:сс», дальше — «ч:мм».
 export function fmtDur(ms: number) {
   const s = Math.max(0, Math.round(ms / 1000));
+  if (s >= 86400) return `${Math.floor(s / 86400)} д ${Math.floor((s % 86400) / 3600)} ч`;
   if (s < 3600) return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}`;
 }
@@ -47,4 +48,11 @@ export function fmtLength(min: number) {
   return m ? `${h} ч ${m} мин` : `${h} ч`;
 }
 
-export const dayLong = (d: Date) => `${DOWS[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+// «25 окт.», «3 мая».
+export function shortDate(k: string) {
+  const [, m, d] = k.split('-').map(Number);
+  const g = MONTHS_GEN[m - 1];
+  return `${d} ${g.length > 4 ? g.slice(0, 3) + '.' : g}`;
+}
+
+export const dayLong =(d: Date) => `${DOWS[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;

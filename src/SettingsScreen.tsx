@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DOWS_SHORT, fmtDur, MONTHS_GEN, toMin, todayKey } from './date';
 import { MiniRing } from './Ring';
-import { sortItems, ThemeChoice, useStore } from './store';
+import { eventsOn, sortItems, ThemeChoice, useStore } from './store';
 import { MONO, useTheme } from './theme';
 import { Segmented, Switch } from './ui';
 
@@ -11,7 +11,7 @@ export function SettingsScreen({ now }: { now: Date }) {
   const { settings, setSettings, items } = useStore();
 
   const nm = now.getHours() * 60 + now.getMinutes();
-  const next = sortItems(items.filter((i) => i.date === todayKey() && i.type === 'event' && i.kind !== 'allday')).find(
+  const next = sortItems(eventsOn(items, todayKey()).filter((i) => i.kind !== 'allday')).find(
     (e) => toMin(e.start!) >= nm,
   );
   const nextAt = next ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), ...(next.start!.split(':').map(Number) as [number, number])) : null;

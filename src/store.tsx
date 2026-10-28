@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { toMin } from './date';
+import { addDays, keyOf, parseKey, toMin } from './date';
 
 export type ItemType = 'event' | 'note';
 export type Kind = 'range' | 'point' | 'allday';
@@ -14,10 +14,17 @@ export type Item = {
   title: string;
   start?: string; // HH:MM
   end?: string;
+  endDate?: string; // событие-промежуток на несколько дней / заметка на несколько дней
+  noteMode?: NoteMode; // у старых заметок нет — считаем «пока не закрою»
   done?: boolean;
   doneDate?: string; // день, в который заметку закрыли
   created: number;
 };
+
+export type NoteMode = 'day' | 'span' | 'open';
+
+// Событие на конкретный день: многодневное обрезано до границ дня, исходные даты в span.
+export type DayItem = Item & { span?: { date: string; start: string; endDate: string; end: string } };
 
 export type ThemeChoice = 'light' | 'dark' | 'auto';
 
@@ -137,13 +144,52 @@ export function sortItems<T extends Item>(arr: T[]) {
 
 export function itemsByDate(items: Item[]) {
   const map: Record<string, Item[]> = {};
-  for (const it of items) (map[it.date] ??= []).push(it);
+  for (const it of items) {
+    // Многодневное событие и заметка «на несколько дней» отмечаются в каждом своём дне.
+    const multi = isMultiDay(it) || (it.type === 'note' && it.noteMode === 'span' && !!it.endDate);
+    if (!multi) {
+      (map[it.date] ??= []).push(it);
+      continue;
+    }
+    for (let d = parseKey(it.date), i = 0; keyOf(d) <= it.endDate! && i < 366; d = addDays(d, 1), i++) (map[keyOf(d)] ??= []).push(it);
+  }
   return map;
 }
 
-// Заметка видна со своего дня и дальше, пока её не закрыли (и в день закрытия).
-export const noteVisibleOn = (n: Item, key: string) =>
-  n.type === 'note' && n.date <= key && (!n.done || (n.doneDate ?? n.date) >= key);
+export const isMultiDay = (it: Item) => it.kind === 'range' && !!it.endDate && it.endDate > it.date;
+
+// Заметка: «день» — только свой день, «несколько дней» — с date по endDate,
+// «пока не закрою» — со своего дня и дальше, пока не закрыта (и в день закрытия).
+export function noteVisibleOn(n: Item, key: string) {
+  if (n.type !== 'note' || n.date > key) return false;
+  const mode = n.noteMode ?? 'open';
+  if (mode === 'day') return n.date === key;
+  if (mode === 'span') return key <= (n.endDate ?? n.date);
+  return !n.done || (n.doneDate ?? n.date) >= key;
+}
+
+// События этого дня; многодневные обрезаны до 00:00–24:00 этого дня.
+export function eventsOn(items: Item[], key: string): DayItem[] {
+  const out: DayItem[] = [];
+  for (const e of items) {
+    if (e.type !== 'event') continue;
+    if (!isMultiDay(e)) {
+      if (e.date === key) out.push(e);
+      continue;
+    }
+    if (key < e.date || key > e.endDate!) continue;
+    out.push({
+      ...e,
+      start: key === e.date ? e.start : '00:00',
+      end: key === e.endDate ? e.end : '24:00',
+      span: { date: e.date, start: e.start!, endDate: e.endDate!, end: e.end! },
+    });
+  }
+  return out;
+}
+
+// Всё, что видно в этот день: события и заметки.
+export const dayItemsOn = (items: Item[], key: string): DayItem[] => [...eventsOn(items, key), ...items.filter((n) => noteVisibleOn(n, key))];
 
 export const isPast =(it: Item, nm: number) =>
   (it.kind === 'range' && toMin(it.end!) <= nm) || (it.kind === 'point' && toMin(it.start!) < nm);
