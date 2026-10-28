@@ -1,0 +1,82 @@
+name: TestFlight
+
+# Сборка на Mac-сервере GitHub и отправка в TestFlight — без EAS.
+# Подпись автоматическая через ключ App Store Connect API (секреты репозитория):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (содержимое .p8 файла).
+on:
+  workflow_dispatch:
+
+env:
+  TEAM_ID: RH67B2MANC
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Свежий Xcode (Expo 57 требует Xcode 26.4+)
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          echo "Xcode: $X"
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Нативный проект
+        run: npx expo prebuild -p ios --no-install --clean && cd ios && pod install
+        env:
+          CI: '1'
+      # Номер сборки во всех Info.plist (приложение и виджет) должен расти.
+      - name: Номер сборки
+        run: |
+          BUILD=$(( ${{ github.run_number }} + 100 ))
+          for PLIST in $(ls ios/*/Info.plist | grep -v Pods); do
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$PLIST" || true
+            echo "$PLIST build=$BUILD"
+          done
+      - name: Ключ App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p ~/private_keys
+          printf '%s\n' "$ASC_KEY_P8" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
+      - name: Сборка архива
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          WS=$(ls -d ios/*.xcworkspace | head -1)
+          SCHEME=$(basename "$WS" .xcworkspace)
+          echo "workspace=$WS scheme=$SCHEME"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/app.xcarchive archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM=$TEAM_ID CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION=$(( ${{ github.run_number }} + 100 ))
+      - name: Отправка в TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+            '<plist version="1.0"><dict>' \
+            '<key>method</key><string>app-store-connect</string>' \
+            '<key>destination</key><string>upload</string>' \
+            "<key>teamID</key><string>$TEAM_ID</string>" \
+            '<key>signingStyle</key><string>automatic</string>' \
+            '</dict></plist>' > build/export.plist
+          xcodebuild -exportArchive -archivePath build/app.xcarchive -exportOptionsPlist build/export.plist \
+            -exportPath build/out -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
