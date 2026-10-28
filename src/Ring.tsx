@@ -34,7 +34,6 @@ const R = 128;
 function RingImpl({ t, size, items, isToday, nowMin, selectedId, showNight, onSelect }: Props) {
   const events = items.filter((i) => i.type === 'event');
   const allDay = items.filter((i) => i.kind === 'allday').slice(0, 2);
-  const nightLabel = polar(C, C, 99, 180);
 
   return (
     <Svg width={size} height={size} viewBox="0 0 360 360">
@@ -60,21 +59,6 @@ function RingImpl({ t, size, items, isToday, nowMin, selectedId, showNight, onSe
           stroke={h < 6 && showNight ? t.segNight : t.seg}
         />
       ))}
-      {showNight && (
-        <SvgText
-          x={nightLabel[0]}
-          y={nightLabel[1] + 3}
-          textAnchor="middle"
-          fontSize={8.5}
-          fontWeight="600"
-          letterSpacing={1.6}
-          rotation={45}
-          origin={`${nightLabel[0]}, ${nightLabel[1]}`}
-          fill={t.muted}
-        >
-          НОЧЬ
-        </SvgText>
-      )}
 
       {events.map((ev) => {
         const sel = ev.id === selectedId;

@@ -64,27 +64,37 @@ export function DayScreen({ date, setDate, now, onFocusEvent, onEdit }: Props) {
           <ChevronLeft color={t.ink} />
         </IconButton>
         <View style={{ alignItems: 'center' }}>
-          <Text style={[st.dow, { color: t.muted }]}>{DOWS[date.getDay()]}</Text>
+          {/* Одно и то же место: «сегодня» — метка, на другом дне — кнопка возврата. */}
+          {isToday ? (
+            <View style={[st.pill, { backgroundColor: t.ink, borderColor: t.ink }]}>
+              <Text style={[st.pillText, { color: t.onInk }]}>СЕГОДНЯ</Text>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityLabel="Вернуться к сегодня"
+              hitSlop={8}
+              onPress={() => {
+                tap();
+                setDate(new Date());
+              }}
+              style={({ pressed }) => [st.pill, { borderColor: t.ink, backgroundColor: pressed ? t.soft : 'transparent' }]}
+            >
+              <ChevronLeft size={12} width={2.6} color={t.ink} />
+              <Text style={[st.pillText, { color: t.ink }]}>СЕГОДНЯ</Text>
+            </Pressable>
+          )}
           <Text style={[st.dnum, { color: t.ink }]}>
             {date.getDate()} {MONTHS_GEN[date.getMonth()]}
             {date.getFullYear() !== now.getFullYear() ? ` ${date.getFullYear()}` : ''}
+          </Text>
+          <Text style={[st.dow, { color: t.muted }]}>
+            {isToday ? DOWS[date.getDay()] : `${relDay(date, now)} · ${DOWS[date.getDay()]}`}
           </Text>
         </View>
         <IconButton onPress={() => shift(1)} label="Следующий день">
           <ChevronRight color={t.ink} />
         </IconButton>
       </View>
-      {!isToday && (
-        <Pressable
-          onPress={() => {
-            tap();
-            setDate(new Date());
-          }}
-          style={[st.todayChip, { borderColor: t.hair }]}
-        >
-          <Text style={{ fontSize: 12, fontWeight: '600', color: t.inkSoft }}>Вернуться к сегодня</Text>
-        </Pressable>
-      )}
 
       <View style={{ width: ringSize, height: ringSize, alignSelf: 'center', marginTop: 14, marginBottom: 4 }}>
         <Ring
@@ -221,6 +231,22 @@ function Section({ title, count, closed, onToggle, children }: { title: string; 
   );
 }
 
+// «завтра», «через 3 дня», «5 дней назад».
+function relDay(date: Date, now: Date) {
+  const a = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const n = Math.round((+a - +b) / 86400000);
+  if (n === 1) return 'завтра';
+  if (n === -1) return 'вчера';
+  if (n === 2) return 'послезавтра';
+  if (n === -2) return 'позавчера';
+  const k = Math.abs(n);
+  const m10 = k % 10;
+  const m100 = k % 100;
+  const word = m10 === 1 && m100 !== 11 ? 'день' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'дня' : 'дней';
+  return n > 0 ? `через ${k} ${word}` : `${k} ${word} назад`;
+}
+
 function centerText(events: Item[], key: string, isToday: boolean, date: Date, now: Date, nm: number, selectedId: string | null) {
   const ev = focusEventFor(events, isToday, nm, selectedId);
   if (!ev) return { label: 'планов нет', count: '—', name: 'Свободный день', time: '' };
@@ -243,9 +269,10 @@ function centerText(events: Item[], key: string, isToday: boolean, date: Date, n
 
 const st = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  dow: { fontSize: 13, fontWeight: '500' },
+  dow: { fontSize: 13, fontWeight: '500', marginTop: 2 },
   dnum: { fontSize: 21, fontWeight: '600', letterSpacing: -0.2, marginTop: 1 },
-  todayChip: { alignSelf: 'center', marginTop: 8, borderWidth: 1, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1.2, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 10, marginBottom: 5 },
+  pillText: { fontSize: 10.5, fontWeight: '700', letterSpacing: 1.2 },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: '19%' },
   rcLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase' },
   rcCount: { fontFamily: MONO, fontSize: 34, fontWeight: '600', letterSpacing: -0.6, marginTop: 6, fontVariant: ['tabular-nums'] },
